@@ -1,0 +1,61 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    working_dir: /var/www
+    volumes:
+      - ./storage:/var/www/storage
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+
+  caddy:
+    image: caddy:alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./public:/var/www/public
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    volumes:
+      - db-data:/var/lib/mysql
+
+  redis:
+    image: redis:alpine
+    restart: always
+    volumes:
+      - redis-data:/data
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    env_file: .env
+    depends_on:
+      - app
+      - db
+    command: php artisan schedule:work
+
+volumes:
+  db-data:
+  caddy_data:
+  caddy_config:
+  redis-data:

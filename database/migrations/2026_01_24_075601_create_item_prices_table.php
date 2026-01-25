@@ -1,0 +1,37 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+{
+    Schema::create('item_prices', function (Blueprint $table) {
+        $table->id();
+        // Связываем с таблицей items. Если предмет удалят, цена тоже удалится (cascade)
+        $table->foreignId('item_id')->constrained('items')->onDelete('cascade');
+        
+        $table->decimal('price', 10, 2); // Цена
+        $table->string('source'); // Откуда цена: 'steam' или 'skinport'
+        $table->timestamp('recorded_at'); // Время записи цены
+        
+        $table->timestamps();
+        
+        // Индекс для ускорения построения графиков
+        $table->index(['item_id', 'recorded_at']);
+    });
+}
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('item_prices');
+    }
+};

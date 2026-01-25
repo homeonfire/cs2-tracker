@@ -1,0 +1,16 @@
+{
+    # Замени это на свой email, чтобы Let's Encrypt мог слать уведомления
+    email your-email@example.com
+}
+
+cs2-tracker.ru {
+    root * /var/www/public
+    file_server
+    encode gzip
+    
+    php_fastcgi app:9000
+    
+    log {
+        output file /var/log/caddy/access.log
+    }
+}
