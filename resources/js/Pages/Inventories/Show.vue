@@ -80,7 +80,7 @@ const formatMoney = (val) => {
                 :href="route('inventories.item', item.id)"
                 class="group bg-[#15171c] border border-gray-800 rounded-xl p-3 transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between"
                 :class="{'hover:shadow-lg': true}"
-                :style="{ borderBottomColor: item.rarity_color || '#374151', borderBottomWidth: '3px' }"
+                :style="{ background: item.rarity_color ? `#${item.rarity_color}` : '#10b981' , borderBottomWidth: '3px' }"
             >
                 <div 
                     class="absolute inset-0 opacity-0 group-hover:opacity-10 transition duration-500 pointer-events-none"
