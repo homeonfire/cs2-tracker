@@ -1,7 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import ApexCharts from 'vue3-apexcharts';
 
 const props = defineProps({
     inventoryItem: Object,
@@ -11,155 +12,170 @@ const props = defineProps({
     inventoryId: Number
 });
 
-const form = useForm({
-    buy_price: props.inventoryItem.buy_price || null
+// 1. Умное вычисление цены (берем min_price из модели)
+const currentPrice = computed(() => {
+    return parseFloat(props.item.min_price || 0);
 });
 
-const savePrice = () => {
-    form.put(route('inventory.update', props.inventoryItem.id), {
-        preserveScroll: true,
-        onSuccess: () => { }
-    });
+// 2. Цена покупки
+const buyPrice = computed(() => {
+    return parseFloat(props.inventoryItem.buy_price || 0);
+});
+
+// 3. Считаем PnL (Прибыль/Убыток)
+const profit = computed(() => {
+    return currentPrice.value - buyPrice.value;
+});
+
+// 4. Считаем ROI (Процент доходности)
+const roi = computed(() => {
+    if (buyPrice.value === 0) return 0;
+    return (profit.value / buyPrice.value) * 100;
+});
+
+// 5. Определяем цвета для профита
+const isPositive = computed(() => profit.value >= 0);
+const profitColorClass = computed(() => isPositive.value ? 'text-green-400' : 'text-red-400');
+const profitBgClass = computed(() => isPositive.value ? 'bg-green-500/10' : 'bg-red-500/10');
+
+// Форматирование денег
+const formatMoney = (val) => {
+    return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const profit = computed(() => {
-    const buy = parseFloat(form.buy_price);
-    const current = parseFloat(props.item.price_skinport);
-    if (!buy || isNaN(buy) || buy === 0) return null;
-    if (!current) return null;
-    const diff = current - buy;
-    const percent = ((diff / buy) * 100).toFixed(2);
-    return { val: diff.toFixed(2), percent: percent, isPositive: diff >= 0 };
-});
-
-const formatMoney = (val) => val ? `$${parseFloat(val).toFixed(2)}` : '---';
-
-const chartOptions = ref({
-    chart: { type: 'area', height: 350, fontFamily: 'inherit', toolbar: { show: false }, background: 'transparent', animations: { enabled: true } },
-    colors: ['#818cf8', '#34d399'],
-    stroke: { curve: 'smooth', width: 3 },
-    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
+// Настройки графика
+const chartOptions = {
+    chart: {
+        type: 'area',
+        height: 350,
+        toolbar: { show: false },
+        background: 'transparent'
+    },
+    colors: ['#4f46e5', '#10b981'], // Indigo, Emerald
+    stroke: { curve: 'smooth', width: 2 },
     dataLabels: { enabled: false },
-    grid: { borderColor: '#374151', strokeDashArray: 4, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
-    xaxis: { type: 'datetime', tooltip: { enabled: false }, axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#9ca3af' } } },
-    yaxis: { labels: { style: { colors: '#9ca3af', fontFamily: 'monospace' }, formatter: (v) => `$${v.toFixed(2)}` } },
     theme: { mode: 'dark' },
-    legend: { position: 'top', horizontalAlign: 'right', labels: { colors: '#fff' } },
-    tooltip: { theme: 'dark' }
-});
-
-const links = computed(() => {
-    const nameEnc = encodeURIComponent(props.item.market_hash_name);
-    return {
-        skinport: `https://skinport.com/market?search=${nameEnc}`,
-        dmarket: `https://dmarket.com/ingame-items/item-list/csgo-skins?title=${nameEnc}`,
-        steam: `https://steamcommunity.com/market/listings/730/${nameEnc}`
-    };
-});
+    xaxis: {
+        type: 'datetime',
+        tooltip: { enabled: false },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
+    },
+    yaxis: {
+        labels: {
+            formatter: (val) => '$' + val.toFixed(2)
+        }
+    },
+    grid: {
+        borderColor: '#374151',
+        strokeDashArray: 4,
+    },
+    tooltip: {
+        theme: 'dark',
+        x: { format: 'dd MMM yyyy' }
+    }
+};
 </script>
 
 <template>
-    <Head :title="item.name" />
+    <Head :title="item.market_hash_name" />
 
     <AuthenticatedLayout>
         <template #header>
             <div class="flex items-center gap-4">
-                <Link :href="route('inventories.show', inventoryId)" class="group flex items-center justify-center w-10 h-10 bg-[#1e2128] border border-gray-700 hover:border-indigo-500 rounded-xl transition text-gray-400 hover:text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                <Link :href="route('inventories.show', inventoryId)" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 transition">
+                    ← Назад
                 </Link>
-                <div>
-                    <h2 class="font-black text-2xl text-white tracking-tighter uppercase italic">{{ item.name }}</h2>
-                    <div class="flex items-center gap-2 text-xs text-gray-500 font-mono mt-0.5">
-                        <span>{{ inventoryName }}</span>
-                        <span class="text-gray-700">•</span>
-                        <span class="text-indigo-400">{{ item.market_hash_name }}</span>
-                    </div>
-                </div>
+                <h1 class="text-2xl font-bold text-white leading-tight">
+                    {{ item.market_hash_name }}
+                    <span class="block text-sm font-normal text-gray-500 mt-1">{{ inventoryName }}</span>
+                </h1>
             </div>
         </template>
 
-        <div class="pb-12">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div class="lg:col-span-4 space-y-6">
-                    <div class="bg-[#15171c] border border-gray-800 rounded-2xl p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-[400px]">
-                        <div class="absolute inset-0 opacity-20" :style="{ background: `radial-gradient(circle at center, #${item.rarity_color || '555'} 0%, transparent 70%)` }"></div>
-                        <img :src="item.image_url" class="relative z-10 w-full max-w-[300px] drop-shadow-[0_10px_40px_rgba(0,0,0,0.5)] hover:scale-110 transition-transform duration-500 ease-out">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-10">
+            
+            <div class="space-y-6">
+                <div class="bg-[#15171c] border border-gray-800 rounded-2xl p-6 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1" :style="{ backgroundColor: item.rarity_color }"></div>
+                    
+                    <div class="aspect-square flex items-center justify-center mb-6 relative">
+                        <img :src="item.image_url" :alt="item.name" class="w-full h-full object-contain drop-shadow-2xl hover:scale-105 transition duration-500">
+                         <div v-if="item.name.includes('StatTrak')" class="absolute top-2 right-2 bg-orange-500 text-black text-xs font-bold px-2 py-0.5 rounded">StatTrak™</div>
                     </div>
-                    <div class="grid grid-cols-1 gap-3">
-                        <a :href="links.skinport" target="_blank" class="flex items-center justify-between px-5 py-4 bg-[#1a1c23] hover:bg-[#1f222b] border border-gray-800 hover:border-indigo-500/50 rounded-xl group transition-all duration-200">
-                            <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div><span class="font-bold text-gray-300 group-hover:text-white transition">Skinport</span></div>
-                            <svg class="w-5 h-5 text-gray-600 group-hover:text-indigo-400 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                        </a>
-                        <a :href="links.dmarket" target="_blank" class="flex items-center justify-between px-5 py-4 bg-[#1a1c23] hover:bg-[#1f222b] border border-gray-800 hover:border-emerald-500/50 rounded-xl group transition-all duration-200">
-                            <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div><span class="font-bold text-gray-300 group-hover:text-white transition">DMarket</span></div>
-                            <svg class="w-5 h-5 text-gray-600 group-hover:text-emerald-400 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                        </a>
-                        <a :href="links.steam" target="_blank" class="flex items-center justify-between px-5 py-4 bg-[#1a1c23] hover:bg-[#1f222b] border border-gray-800 hover:border-blue-500/50 rounded-xl group transition-all duration-200">
-                            <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div><span class="font-bold text-gray-300 group-hover:text-white transition">Steam</span></div>
-                            <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                        </a>
+
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gray-800/50 p-3 rounded-xl">
+                                <div class="text-[10px] uppercase text-gray-500 font-bold mb-1">Текущая цена</div>
+                                <div class="text-2xl font-mono font-bold text-white">{{ formatMoney(currentPrice) }}</div>
+                            </div>
+                            <div class="bg-gray-800/50 p-3 rounded-xl">
+                                <div class="text-[10px] uppercase text-gray-500 font-bold mb-1">Цена покупки</div>
+                                <div class="text-2xl font-mono font-bold text-gray-300">{{ formatMoney(buyPrice) }}</div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl flex items-center justify-between" :class="profitBgClass">
+                            <div>
+                                <div class="text-[10px] uppercase font-bold opacity-70" :class="profitColorClass">PnL (Прибыль)</div>
+                                <div class="text-xl font-bold font-mono" :class="profitColorClass">
+                                    {{ isPositive ? '+' : '' }}{{ formatMoney(profit) }}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] uppercase font-bold opacity-70" :class="profitColorClass">ROI</div>
+                                <div class="text-xl font-bold font-mono" :class="profitColorClass">
+                                    {{ isPositive ? '+' : '' }}{{ roi.toFixed(2) }}%
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="lg:col-span-8 space-y-6">
-                    <div class="bg-[#15171c] border border-gray-800 rounded-2xl p-6 md:p-8">
-                        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-6 flex items-center gap-2"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> Финансы</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                            <div class="space-y-2">
-                                <label class="text-xs text-gray-400 font-bold ml-1">Цена покупки</label>
-                                <div class="relative group">
-                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-indigo-400 transition">$</span>
-                                    <input v-model="form.buy_price" type="number" step="0.01" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl py-4 pl-8 pr-20 text-white placeholder-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-mono text-xl font-bold" placeholder="0.00" @keyup.enter="savePrice">
-                                    <button @click="savePrice" class="absolute right-2 top-2 bottom-2 px-4 bg-gray-800 hover:bg-indigo-600 text-gray-400 hover:text-white rounded-lg text-xs font-bold uppercase transition">Save</button>
-                                </div>
-                            </div>
-                            <div class="bg-[#0f1115] border border-gray-700/50 rounded-xl p-4 flex items-center justify-between h-full min-h-[86px]">
-                                <div>
-                                    <div class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Текущий PnL</div>
-                                    <div v-if="profit" class="text-3xl font-mono font-black tracking-tight" :class="profit.isPositive ? 'text-green-400' : 'text-red-400'">{{ profit.isPositive ? '+' : '' }}{{ profit.val }}<span class="text-lg font-bold opacity-70">$</span></div>
-                                    <div v-else class="text-3xl font-mono font-bold text-gray-700">--</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">ROI</div>
-                                    <div v-if="profit" class="text-xl font-mono font-bold" :class="profit.isPositive ? 'text-green-400' : 'text-red-400'">{{ profit.isPositive ? '+' : '' }}{{ profit.percent }}%</div>
-                                    <div v-else class="text-xl font-mono font-bold text-gray-700">--</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="bg-[#15171c] border border-gray-800 rounded-2xl p-6">
+                    <h3 class="text-white font-bold mb-4">Детали</h3>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex justify-between">
+                            <span class="text-gray-500">Tradable</span>
+                            <span :class="item.is_tradable ? 'text-green-400' : 'text-red-400'">
+                                {{ item.is_tradable ? 'Да' : 'Нет (Бан)' }}
+                            </span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-gray-500">Asset ID</span>
+                            <span class="text-gray-300 font-mono">{{ inventoryItem.asset_id }}</span>
+                        </li>
+                         <li class="flex justify-between">
+                            <span class="text-gray-500">Добавлен</span>
+                            <span class="text-gray-300">{{ new Date(inventoryItem.created_at).toLocaleDateString() }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-[#15171c] border border-gray-800 p-5 rounded-2xl relative overflow-hidden group">
-                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-indigo-500/20 rounded-full blur-xl group-hover:bg-indigo-500/30 transition"></div>
-                            <div class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mb-1">Skinport</div>
-                            <div class="text-2xl text-white font-mono font-bold">{{ formatMoney(item.price_skinport) }}</div>
-                        </div>
-                        <div class="bg-[#15171c] border border-gray-800 p-5 rounded-2xl relative overflow-hidden group">
-                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/20 rounded-full blur-xl group-hover:bg-emerald-500/30 transition"></div>
-                            <div class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-1">DMarket</div>
-                            <div class="text-2xl text-white font-mono font-bold">{{ formatMoney(item.price_dmarket) }}</div>
-                        </div>
-                        <div class="bg-[#15171c] border border-gray-800 p-5 rounded-2xl relative overflow-hidden group">
-                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition"></div>
-                            <div class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-1">Steam</div>
-                            <div class="text-2xl text-white font-mono font-bold">{{ formatMoney(item.price_steam) }}</div>
-                        </div>
+            <div class="lg:col-span-2">
+                <div class="bg-[#15171c] border border-gray-800 rounded-2xl p-6 h-full">
+                    <h3 class="text-white font-bold mb-6 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                        История цены (90 дней)
+                    </h3>
+                    
+                    <div v-if="chartSeries[0].data.length > 0 || chartSeries[1].data.length > 0">
+                        <ApexCharts 
+                            type="area" 
+                            height="350" 
+                            :options="chartOptions" 
+                            :series="chartSeries" 
+                        />
                     </div>
-
-                    <div class="bg-[#15171c] border border-gray-800 rounded-2xl p-6">
-                         <div class="flex items-center justify-between mb-6">
-                            <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg> История цен (30 дней)</h3>
-                            <div class="flex gap-4">
-                                <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-2 h-2 rounded-full bg-indigo-400"></span> Skinport</div>
-                                <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> DMarket</div>
-                            </div>
-                        </div>
-                        <div class="w-full h-[350px] relative">
-                            <apexchart width="100%" height="100%" type="area" :options="chartOptions" :series="chartSeries"></apexchart>
-                        </div>
+                    <div v-else class="h-[300px] flex flex-col items-center justify-center text-gray-500">
+                        <p>Нет данных для графика</p>
+                        <span class="text-xs opacity-50 mt-2">История начнет собираться при следующих обновлениях</span>
                     </div>
                 </div>
             </div>
+
         </div>
     </AuthenticatedLayout>
 </template>
