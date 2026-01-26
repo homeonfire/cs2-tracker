@@ -8,12 +8,12 @@ const props = defineProps({
     backgroundSkins: Array,
 });
 
-// Logic for the background marquee (Preserved because it's cool)
+// Логика для бесконечной прокрутки фона
 const rows = computed(() => {
     if (!props.backgroundSkins || props.backgroundSkins.length === 0) return [];
     
     let skins = [...props.backgroundSkins];
-    while (skins.length < 60) { // Optimization: Reduced count slightly for performance
+    while (skins.length < 60) { 
         skins = [...skins, ...props.backgroundSkins];
     }
 
@@ -29,15 +29,17 @@ const rows = computed(() => {
 
 <template>
     <Head>
-        <title>CS2 Tracker — Трекер Инвентаря, Аналитика PnL и Цены Скинов</title>
-        <meta name="description" content="Бесплатный трекер инвентаря CS2. Следите за стоимостью скинов, считайте прибыль (PnL/ROI) и анализируйте рынок Steam, Skinport и DMarket в реальном времени.">
-        <meta name="keywords" content="CS2 инвентарь, калькулятор скинов, оценка инвентаря, PnL трекер, инвестиции CS2, цены на скины, Steam аналитика">
+        <title>CS2 Tracker — Оценка стоимости инвентаря, PnL Аналитика и Цены Скинов</title>
+        <meta name="description" content="Бесплатный трекер инвентаря CS2 и калькулятор инвестиций. Узнайте реальную стоимость скинов (Skinport, DMarket), рассчитайте чистую прибыль (PnL) и следите за динамикой цен Steam.">
+        <meta name="keywords" content="CS2 инвентарь, калькулятор скинов, оценка инвентаря, PnL трекер, инвестиции CS2, цены на скины, Steam аналитика, Skinport цены, DMarket цены">
     </Head>
 
     <div class="min-h-screen bg-[#090a0c] text-white overflow-x-hidden relative font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
         
         <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-            <div class="absolute inset-0 bg-[#090a0c] z-10 opacity-90"></div> <div class="absolute -top-[20%] -left-[20%] w-[140%] h-[140%] flex flex-col gap-6 -rotate-6 opacity-30 grayscale-[70%]">
+            <div class="absolute inset-0 bg-[#090a0c] z-10 opacity-90"></div> 
+            
+            <div class="absolute -top-[20%] -left-[20%] w-[140%] h-[140%] flex flex-col gap-6 -rotate-6 opacity-30 grayscale-[70%]">
                 <div v-for="(row, i) in rows" :key="i" class="flex gap-6 shrink-0 items-center" 
                      :class="i % 2 === 0 ? 'animate-marquee-left' : 'animate-marquee-right'"
                      :style="{ animationDuration: (80 + i * 10) + 's' }">
@@ -90,26 +92,28 @@ const rows = computed(() => {
             <section class="pt-20 pb-32 px-6 flex flex-col items-center text-center max-w-5xl mx-auto">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-8 backdrop-blur-md animate-fade-in">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Бесплатный бета доступ
+                    Работает с Counter-Strike 2
                 </div>
 
                 <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[0.9]">
-                    Твой Инвентарь. <br>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-emerald-400">Твоя Прибыль.</span>
+                    Трекер Инвентаря CS2 <br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-emerald-400">
+                        и Калькулятор PnL
+                    </span>
                 </h1>
 
                 <p class="text-lg md:text-xl text-gray-400 max-w-2xl mb-12 leading-relaxed">
-                    Профессиональный инструмент для трейдеров и инвесторов CS2. 
-                    Автоматический подсчет <span class="text-gray-200 font-bold">ROI</span>, история цен со <span class="text-gray-200 font-bold">Skinport & Steam</span>, и полная аналитика твоего портфеля.
+                    Профессиональный инструмент для <strong>оценки стоимости инвентаря</strong> в реальных деньгах. 
+                    Сравнивайте цены <strong>Steam vs Skinport</strong>, считайте ROI инвестиций и управляйте портфелем скинов бесплатно.
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                     <Link :href="route('register')" class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-lg transition shadow-[0_0_40px_rgba(79,70,229,0.4)] hover:shadow-[0_0_60px_rgba(79,70,229,0.6)] hover:-translate-y-1 flex items-center justify-center gap-3">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        Начать бесплатно
+                        Оценить инвентарь
                     </Link>
                     <Link :href="route('market.index')" class="px-8 py-4 bg-[#1e2128] border border-gray-700 hover:border-gray-500 text-gray-200 rounded-2xl font-bold text-lg transition hover:-translate-y-1 flex items-center justify-center gap-3">
-                        База Скинов
+                        База Цен Скинов
                         <span>→</span>
                     </Link>
                 </div>
@@ -125,12 +129,12 @@ const rows = computed(() => {
                             <div class="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center mb-6 text-indigo-400">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
                             </div>
-                            <h2 class="text-2xl font-bold text-white mb-3">Глубокая PnL Аналитика</h2>
+                            <h2 class="text-2xl font-bold text-white mb-3">Расчет Прибыли (PnL) и ROI</h2>
                             <p class="text-gray-400 mb-6 max-w-lg">
-                                Забудь про Excel таблицы. Наш трекер автоматически считает цену покупки и текущую рыночную стоимость. Узнай свой точный профит в долларах и процентах (ROI) для каждого предмета.
+                                Автоматический <strong>калькулятор доходности скинов</strong>. Укажите цену покупки, и система покажет вашу чистую прибыль с учетом комиссий и изменений рынка в реальном времени.
                             </p>
                             <div class="mt-4 p-4 bg-[#090a0c] rounded-xl border border-white/5 flex items-center gap-4 max-w-sm opacity-80 group-hover:opacity-100 transition">
-                                <img src="https://community.cloudflare.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I56KU0Zwwo4NUX4oFJZEHLbXH5ApeO4YmlhxYQknCRvN0_Frrfv182Qtb1al0d0B11fTMezZ97dC3nI2PwaX2a-qGwD9Xv8F0j-qQrI3xiVLnqBc5Zj_yJ4CSJlM_Z1rS-1G_kOy-gJO77Z_Jz3Qx6yMk4S7VmQv3308-5v2dFg/360fx360f" class="w-10 h-10 object-contain">
+                                <img src="https://community.cloudflare.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I56KU0Zwwo4NUX4oFJZEHLbXH5ApeO4YmlhxYQknCRvN0_Frrfv182Qtb1al0d0B11fTMezZ97dC3nI2PwaX2a-qGwD9Xv8F0j-qQrI3xiVLnqBc5Zj_yJ4CSJlM_Z1rS-1G_kOy-gJO77Z_Jz3Qx6yMk4S7VmQv3308-5v2dFg/360fx360f" class="w-10 h-10 object-contain" alt="AK-47 Asiimov">
                                 <div>
                                     <div class="text-xs text-gray-500 font-bold uppercase">AK-47 | Asiimov</div>
                                     <div class="text-sm font-mono text-emerald-400 font-bold">+$24.50 (32%) ↗</div>
@@ -146,9 +150,9 @@ const rows = computed(() => {
                             <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mb-6 text-emerald-400">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </div>
-                            <h3 class="text-xl font-bold text-white mb-3">Цены со всех Маркетов</h3>
+                            <h3 class="text-xl font-bold text-white mb-3">Цены Skinport и DMarket</h3>
                             <p class="text-gray-400 text-sm leading-relaxed">
-                                Мы агрегируем данные с Steam Market, Skinport и DMarket. Всегда актуальные цены и возможность найти арбитраж.
+                                Не ориентируйтесь на Steam. Мы показываем <strong>реальную стоимость инвентаря</strong> в кэше, агрегируя данные с ликвидных торговых площадок.
                             </p>
                         </div>
                     </div>
@@ -157,9 +161,9 @@ const rows = computed(() => {
                         <div class="w-12 h-12 bg-pink-500/10 rounded-xl flex items-center justify-center mb-6 text-pink-400">
                             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-3">Умный Вишлист</h3>
+                        <h3 class="text-xl font-bold text-white mb-3">База Скинов CS2</h3>
                         <p class="text-gray-400 text-sm leading-relaxed">
-                            Создавай списки желаемого из базы в 20,000+ скинов. Следи за просадками и покупай на дне.
+                            Добавляйте в избранное любые предметы из базы 20,000+ скинов. Отслеживайте <strong>историю цен</strong> и ловите лучшие моменты для покупки.
                         </p>
                     </div>
 
@@ -168,9 +172,9 @@ const rows = computed(() => {
                             <div class="w-12 h-12 bg-gray-700/30 rounded-xl flex items-center justify-center mb-6 text-gray-300">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                             </div>
-                            <h2 class="text-2xl font-bold text-white mb-3">Безопасность прежде всего</h2>
+                            <h2 class="text-2xl font-bold text-white mb-3">Безопасная загрузка по Steam ID</h2>
                             <p class="text-gray-400">
-                                Нам не нужен доступ к твоему аккаунту Steam. Мы используем только публичный <b>Steam ID 64</b> для загрузки инвентаря. Никаких API ключей, никаких ботов. Твой аккаунт в полной безопасности.
+                                Наш <strong>парсер инвентаря</strong> работает через публичный API. Нам не нужен логин или пароль от вашего аккаунта. Просто введите <b>Steam ID 64</b>, чтобы загрузить скины.
                             </p>
                         </div>
                         <div class="bg-[#090a0c] p-6 rounded-2xl border border-white/5 w-full md:w-auto min-w-[300px]">
@@ -180,7 +184,7 @@ const rows = computed(() => {
                                 <div class="w-3 h-3 rounded-full bg-green-500"></div>
                             </div>
                             <div class="space-y-3 font-mono text-xs">
-                                <div class="text-gray-500"># Загрузка инвентаря</div>
+                                <div class="text-gray-500"># Запрос к API Steam</div>
                                 <div class="flex gap-2">
                                     <span class="text-purple-400">GET</span>
                                     <span class="text-gray-300">/api/steam/inventory/765611...</span>
@@ -194,15 +198,14 @@ const rows = computed(() => {
             </section>
 
             <section class="max-w-4xl mx-auto px-6 pb-20 text-gray-400 text-sm leading-relaxed">
-                <h3 class="text-white font-bold text-lg mb-4">Почему CS2 Tracker — лучший выбор для инвестора?</h3>
+                <h3 class="text-white font-bold text-lg mb-4">Почему стоит использовать наш Трекер Инвентаря?</h3>
                 <p class="mb-4">
-                    Рынок скинов Counter-Strike 2 постоянно меняется. Чтобы успешно инвестировать, недостаточно просто покупать скины. Вам нужен надежный 
-                    <strong>трекер инвентаря CS2</strong>, который показывает реальную картину. Наш сервис позволяет отслеживать динамику цен не только в Steam, 
-                    но и на реальных торговых площадках, таких как Skinport и DMarket, где цены часто ниже на 20-30%.
+                    Рынок скинов Counter-Strike 2 волатилен. Чтобы успешно зарабатывать, недостаточно просто покупать предметы. Вам нужен надежный 
+                    <strong>трекер инвестиций CS2</strong>. В отличие от стандартных инструментов Steam, наш сервис показывает цены реальных сделок ("кэш прайс"), что позволяет избежать иллюзий о стоимости портфеля.
                 </p>
                 <p>
-                    Используя наш <strong>калькулятор скинов</strong>, вы всегда будете знать, сколько стоит ваш инвентарь в реальных деньгах (Cashout value). 
-                    Мы учитываем комиссию, трейд-баны и редкость паттернов. Это идеальный инструмент как для коллекционеров, так и для активных трейдеров.
+                    Используя <strong>калькулятор скинов</strong>, вы всегда будете знать "чистую" стоимость инвентаря (Cashout value). 
+                    Мы учитываем редкость, флоат и трейд-баны. Это идеальный инструмент для трейдеров, желающих максимизировать прибыль (ROI).
                 </p>
             </section>
 
