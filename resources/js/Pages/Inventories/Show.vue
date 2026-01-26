@@ -107,7 +107,7 @@ const getProfit = (current, buy) => {
                         <div class="flex items-end justify-between">
                             <div>
                                 <div class="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Цена</div>
-                                <div class="text-sm font-mono font-bold text-white group-hover:text-indigo-300 transition-colors">{{ formatPrice(item.price_skinport || item.price) }}</div>
+                                <div class="text-sm font-mono font-bold text-white group-hover:text-indigo-300 transition-colors">{{ formatPrice(item.min_price) }}</div>
                             </div>
                             <div class="text-right">
                                 <div v-if="item.buy_price && parseFloat(item.buy_price) > 0 && getProfit(item.price, item.buy_price)">
