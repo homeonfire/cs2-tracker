@@ -13,24 +13,23 @@ class InventoryController extends Controller
 {
     // 1. СПИСОК ИНВЕНТАРЕЙ
     public function index(Request $request)
-{
-    return Inertia::render('Inventories/Index', [
-        'inventories' => $request->user()->inventories()
-            ->withCount('items') // Нужно для подсчета предметов
-            ->orderBy('total_value', 'desc') // Сортируем самые дорогие вверх
-            ->get()
-    ]);
-}
+    {
+        return Inertia::render('Inventories/Index', [
+            'inventories' => $request->user()->inventories()
+                ->withCount('items')
+                ->orderBy('total_value', 'desc')
+                ->get()
+        ]);
+    }
 
     // 2. СОЗДАНИЕ НОВОГО
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:50',
-            'steam_id' => 'required|numeric|digits:17', // SteamID64 всегда 17 цифр
+            'steam_id' => 'required|numeric|digits:17',
         ]);
 
-        // Создаем запись в БД
         $request->user()->inventories()->create([
             'name' => $validated['name'],
             'steam_id' => $validated['steam_id'],
@@ -40,13 +39,12 @@ class InventoryController extends Controller
         return Redirect::route('inventories.index');
     }
 
-    // 3. ПРОСМОТР КОНКРЕТНОГО (Бывший Dashboard)
+    // 3. ПРОСМОТР КОНКРЕТНОГО (ИСПРАВЛЕНО)
     public function show(Request $request, $id, SteamInventoryService $steamService, InventoryService $inventoryService)
     {
         $inventoryModel = $request->user()->inventories()->findOrFail($id);
 
-        // ОБНОВЛЕНИЕ: Если инвентарь совсем пустой, попробуем загрузить его первый раз.
-        // В остальных случаях - просто показываем из базы.
+        // Если пусто - пробуем загрузить
         if ($inventoryModel->items()->count() === 0) {
             $steamItems = $steamService->fetchInventory($inventoryModel->steam_id);
             if ($steamItems) {
@@ -54,24 +52,40 @@ class InventoryController extends Controller
             }
         }
 
-        // Подготовка данных (как и было)
+        // === ИСПРАВЛЕНИЕ ЗДЕСЬ ===
         $items = $inventoryModel->items()->with('item')->get()->map(function ($invItem) {
+            
+            // Используем min_price из модели, а не жесткий skinport
+            $bestPrice = $invItem->item->min_price; 
+
             return [
                 'id' => $invItem->id,
                 'item_id' => $invItem->item_id,
                 'asset_id' => $invItem->asset_id,
                 'name' => $invItem->item->name,
-                'market_hash_name' => $invItem->item->market_hash_name, // Важно для поиска картинки
+                'market_hash_name' => $invItem->item->market_hash_name,
                 'image' => $invItem->item->image_url,
-                'price' => $invItem->item->price_skinport,
-                'price_formatted' => '$ ' . number_format($invItem->item->price_skinport, 2),
+                
+                // ВОТ ТУТ МЕНЯЕМ: берем лучшую цену
+                'price' => $bestPrice,
+                'price_formatted' => '$ ' . number_format($bestPrice, 2),
+                
                 'buy_price' => $invItem->buy_price,
                 'rarity_color' => $invItem->item->rarity_color,
                 'is_tradable' => $invItem->is_tradable,
             ];
         });
 
-        // Статистика (как и было)
+        // === ПЕРЕСЧЕТ СТОИМОСТИ ===
+        // Пересчитываем общую стоимость на основе min_price прямо сейчас
+        $calculatedTotal = $items->sum('price');
+        
+        // Если стоимость в базе отличается от реальной (например, была 0), обновляем базу
+        if (abs($inventoryModel->total_value - $calculatedTotal) > 0.01) {
+            $inventoryModel->total_value = $calculatedTotal;
+            $inventoryModel->save();
+        }
+
         $totalValue = $inventoryModel->total_value;
         $totalInvested = $inventoryModel->items()->sum('buy_price');
         $totalProfit = $totalValue - $totalInvested;
@@ -88,7 +102,6 @@ class InventoryController extends Controller
                 'roi' => number_format($totalRoi, 2),
                 'is_positive' => $totalProfit >= 0
             ],
-            // Передаем дату обновления, чтобы показать юзеру "Обновлено 5 мин назад"
             'last_updated' => $inventoryModel->updated_at->diffForHumans()
         ]);
     }
@@ -102,46 +115,37 @@ class InventoryController extends Controller
         return Redirect::route('inventories.index');
     }
 
-    // Принудительное обновление по кнопке
+    // REFRESH
     public function refresh(Request $request, $id, SteamInventoryService $steamService, InventoryService $inventoryService)
     {
         $inventoryModel = $request->user()->inventories()->findOrFail($id);
-
-        // 1. Принудительно качаем
         $steamItems = $steamService->fetchInventory($inventoryModel->steam_id);
 
         if ($steamItems) {
-            // 2. Синхронизируем
             $inventoryService->syncInventory($request->user(), $inventoryModel->steam_id, $steamItems);
             
-            // 3. Обновляем метку времени updated_at (чтобы юзер видел свежее время)
-            $inventoryModel->touch();
-
-            return back()->with('success', 'Инвентарь успешно обновлен!');
+            // После синхронизации нужно пересчитать total_value
+            // Можно сделать редирект на show, там оно само пересчитается кодом выше
+            return back()->with('success', 'Инвентарь обновлен!');
         }
 
-        return back()->with('error', 'Не удалось обновить. Возможно, Steam недоступен.');
+        return back()->with('error', 'Ошибка Steam');
     }
 
-    // Страница детальной информации о предмете
+    // Item Details
     public function itemDetails(Request $request, $id)
     {
-        // 1. Ищем предмет в твоем инвентаре
-        // Используем findOrFail, чтобы если предмета нет - была 404
         $inventoryItem = \App\Models\InventoryItem::with('item')->where('id', $id)->firstOrFail();
         
-        // Проверка прав (что это твой предмет)
         $inventory = \App\Models\Inventory::where('id', $inventoryItem->inventory_id)
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
-        // 2. История цен для графика
         $history = \App\Models\ItemPriceHistory::where('item_id', $inventoryItem->item_id)
-            ->where('created_at', '>=', now()->subDays(90)) // За 3 месяца
+            ->where('created_at', '>=', now()->subDays(90))
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // Формируем серии для графика
         $chartSeries = [
             [
                 'name' => 'Skinport',
@@ -157,7 +161,6 @@ class InventoryController extends Controller
             ]
         ];
 
-        // 3. Данные для карточки
         return Inertia::render('Inventories/ItemDetails', [
             'inventoryItem' => $inventoryItem,
             'item' => $inventoryItem->item,
