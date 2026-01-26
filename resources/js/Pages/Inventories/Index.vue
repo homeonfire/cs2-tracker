@@ -38,7 +38,7 @@ const submit = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center gap-4">
                 <h1 class="text-3xl font-black text-white italic tracking-tight uppercase">
                     Мои <span class="text-indigo-500">Портфели</span>
                 </h1>
