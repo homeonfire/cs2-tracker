@@ -169,4 +169,27 @@ class InventoryController extends Controller
             'inventoryId' => $inventory->id
         ]);
     }
+
+    // Метод для обновления цены покупки (и других полей предмета)
+    public function updateItem(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'buy_price' => 'required|numeric|min:0',
+        ]);
+
+        // Находим предмет (проверка прав уже внутри middleware или через связь, 
+        // но для надежности проверим через user)
+        $inventoryItem = \App\Models\InventoryItem::where('id', $id)->firstOrFail();
+        
+        // Проверяем, принадлежит ли инвентарь этому пользователю
+        $inventory = \App\Models\Inventory::where('id', $inventoryItem->inventory_id)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $inventoryItem->update([
+            'buy_price' => $validated['buy_price']
+        ]);
+
+        return back()->with('success', 'Цена покупки обновлена');
+    }
 }
