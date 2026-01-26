@@ -6,6 +6,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import VueApexCharts from "vue3-apexcharts"; // <--- 1. Импорт
+import { router } from '@inertiajs/vue3';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -26,4 +27,13 @@ createInertiaApp({
     progress: {
         color: '#4B5563',
     },
+});
+
+// --- ДОБАВЬ ЭТОТ БЛОК В КОНЕЦ ФАЙЛА ---
+router.on('navigate', (event) => {
+    // Проверяем, загрузилась ли Метрика
+    if (typeof ym !== 'undefined') {
+        // Отправляем "хит" (просмотр) с новым URL
+        ym(106452920, 'hit', event.detail.page.url);
+    }
 });
