@@ -78,30 +78,42 @@ const formatMoney = (val) => {
                 v-for="item in items" 
                 :key="item.id"
                 :href="route('inventories.item', item.id)"
-                class="group bg-[#15171c] border border-gray-800 hover:border-indigo-500/50 rounded-xl p-3 transition-all duration-200 hover:-translate-y-1 relative overflow-hidden"
+                class="group bg-[#15171c] border border-gray-800 rounded-xl p-3 transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between"
+                :class="{'hover:shadow-lg': true}"
+                :style="{ borderBottomColor: item.rarity_color || '#374151', borderBottomWidth: '3px' }"
             >
-                <div class="absolute top-0 left-0 w-full h-1 opacity-50" :style="{ backgroundColor: item.rarity_color }"></div>
+                <div 
+                    class="absolute inset-0 opacity-0 group-hover:opacity-10 transition duration-500 pointer-events-none"
+                    :style="{ background: `radial-gradient(circle at center, ${item.rarity_color || '#ffffff'}, transparent 70%)` }"
+                ></div>
 
-                <div class="aspect-[4/3] flex items-center justify-center mb-3 relative">
+                <div class="aspect-[4/3] flex items-center justify-center mb-2 relative z-10">
                     <img :src="item.image" :alt="item.name" class="w-full h-full object-contain drop-shadow-lg group-hover:scale-110 transition duration-300">
                     
-                    <div v-if="item.name.includes('StatTrak')" class="absolute top-0 right-0 bg-orange-500/90 text-black text-[9px] font-bold px-1.5 py-0.5 rounded">ST</div>
+                    <div v-if="item.name.includes('StatTrak')" class="absolute top-0 right-0 bg-orange-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">ST</div>
                 </div>
 
-                <div class="mb-3">
-                    <h3 class="text-xs font-bold text-gray-300 truncate group-hover:text-white transition">{{ item.name.split('|')[0] }}</h3>
-                    <p class="text-[10px] text-gray-500 truncate">{{ item.name.split('|')[1] || item.market_hash_name }}</p>
-                </div>
-
-                <div class="flex justify-between items-end border-t border-gray-800 pt-2">
-                    <div>
-                        <div class="text-[9px] font-bold text-gray-600 uppercase">Цена</div>
-                        <div class="text-sm font-bold font-mono text-white">
-                            {{ item.price_formatted }}
-                        </div>
+                <div class="z-10 relative">
+                    <div class="mb-2">
+                        <h3 
+                            class="text-xs font-bold text-gray-300 truncate transition duration-200"
+                            :style="{ color: item.rarity_color }" 
+                        >
+                            {{ item.name.split('|')[0] }}
+                        </h3>
+                        <p class="text-[10px] text-gray-500 truncate">{{ item.name.split('|')[1] || item.market_hash_name }}</p>
                     </div>
-                    <div class="w-6 h-6 rounded bg-gray-800 flex items-center justify-center text-gray-500 group-hover:bg-indigo-500 group-hover:text-white transition">
-                        +
+
+                    <div class="flex justify-between items-end border-t border-gray-800 pt-2 mt-auto">
+                        <div>
+                            <div class="text-[9px] font-bold text-gray-600 uppercase">Цена</div>
+                            <div class="text-sm font-bold font-mono text-white">
+                                {{ item.price_formatted }}
+                            </div>
+                        </div>
+                        <div class="w-6 h-6 rounded bg-gray-800 flex items-center justify-center text-gray-500 group-hover:bg-indigo-500 group-hover:text-white transition">
+                            +
+                        </div>
                     </div>
                 </div>
             </Link>
