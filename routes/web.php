@@ -36,6 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // 1. Инвентари (CRUD)
     Route::resource('inventories', InventoryController::class);
+    Route::get('/inventory/item/{id}', [InventoryController::class, 'itemDetails'])->name('inventories.item');
     
     // 2. Обновление цены покупки (из модалки)
     // Мы пока используем метод из DashboardController, но роут должен быть
