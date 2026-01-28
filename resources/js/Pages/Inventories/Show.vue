@@ -132,13 +132,6 @@ const refreshInventory = () => {
                 </div>
             </div>
         </template>
-<div class="bg-gray-800 p-4 mb-4 rounded text-xs font-mono text-green-400 overflow-auto h-32">
-    <p>Всего предметов: {{ items.length }}</p>
-    <div v-if="items.length > 0">
-        <p>Первый предмет:</p>
-        <pre>{{ items[1] }}</pre>
-    </div>
-</div>
         <div class="sticky top-0 z-30 bg-[#0f1115]/95 backdrop-blur-md py-4 border-b border-gray-800 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:bg-transparent sm:backdrop-blur-none sm:border-none sm:static">
             <div class="flex flex-col sm:flex-row gap-4 justify-between">
                 <div class="relative w-full sm:max-w-md group">
