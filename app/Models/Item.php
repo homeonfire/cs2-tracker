@@ -8,7 +8,7 @@ class Item extends Model
 {
     protected $fillable = [
         'market_hash_name', 'name', 'image_url', 'rarity_color', 'is_tradable',
-        'price_skinport', 'price_dmarket', 'price_steam',
+        'price_skinport', 'price_dmarket', 'price_steam','rarity_id', 'collection_id', 'min_float', 'max_float',
     ];
 
     protected $casts = [
@@ -43,5 +43,23 @@ class Item extends Model
 
         // floatval гарантирует число
         return floatval(min($validPrices));
+    }
+
+    // Связь с текущими ценами
+    public function prices()
+    {
+        return $this->hasMany(MarketPrice::class);
+    }
+
+    // Хелпер, чтобы быстро получить лучшую цену
+    public function getBestPriceAttribute()
+    {
+        // Можно оптимизировать, но логика такая:
+        return $this->prices->min('price');
+    }
+
+    public function collection()
+    {
+        return $this->belongsTo(Collection::class);
     }
 }

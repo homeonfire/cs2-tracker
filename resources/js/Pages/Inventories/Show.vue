@@ -15,14 +15,37 @@ const searchQuery = ref('');
 const sortBy = ref('price_desc');
 const showTradableOnly = ref(false);
 
-// Вспомогательная функция для безопасного получения цвета
+// Helper to safely get color. If null/undefined, return default grey/green.
 const getRarityColor = (color) => {
-    if (!color) return '#10b981'; // Дефолтный зеленый
-    // Если цвет уже с решеткой - оставляем, если нет - добавляем
+    if (!color) return '#10b981'; // Default Emerald
     return color.startsWith('#') ? color : `#${color}`;
 };
 
-// Логика фильтрации
+// Сокращение названий качеств (Professional Style)
+const getWearShort = (wear) => {
+    if (!wear) return '';
+    if (wear.includes('Factory')) return 'FN';
+    if (wear.includes('Minimal')) return 'MW';
+    if (wear.includes('Field')) return 'FT';
+    if (wear.includes('Well')) return 'WW';
+    if (wear.includes('Battle')) return 'BS';
+    return wear; // Для 'Not Painted' и прочего
+};
+
+// Цвет бейджика качества
+const getWearStyle = (wear) => {
+    if (!wear) return 'bg-gray-800 text-gray-500 border-gray-700'; // Default
+    
+    if (wear.includes('Factory')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]'; // FN - Top
+    if (wear.includes('Minimal')) return 'bg-lime-500/10 text-lime-400 border-lime-500/20'; // MW - Good
+    if (wear.includes('Field')) return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'; // FT - Mid
+    if (wear.includes('Well')) return 'bg-orange-500/10 text-orange-400 border-orange-500/20'; // WW - Bad
+    if (wear.includes('Battle')) return 'bg-red-500/10 text-red-400 border-red-500/20'; // BS - Worst
+    
+    return 'bg-gray-800 text-gray-400 border-gray-700';
+};
+
+// Filter Logic
 const filteredItems = computed(() => {
     let result = [...props.items];
 
@@ -39,8 +62,12 @@ const filteredItems = computed(() => {
     }
 
     result.sort((a, b) => {
-        if (sortBy.value === 'price_desc') return b.price - a.price;
-        if (sortBy.value === 'price_asc') return a.price - b.price;
+        // Ensure price is treated as a number
+        const priceA = parseFloat(a.price) || 0;
+        const priceB = parseFloat(b.price) || 0;
+
+        if (sortBy.value === 'price_desc') return priceB - priceA;
+        if (sortBy.value === 'price_asc') return priceA - priceB;
         if (sortBy.value === 'name') return a.name.localeCompare(b.name);
         return 0;
     });
@@ -105,7 +132,13 @@ const refreshInventory = () => {
                 </div>
             </div>
         </template>
-
+<div class="bg-gray-800 p-4 mb-4 rounded text-xs font-mono text-green-400 overflow-auto h-32">
+    <p>Всего предметов: {{ items.length }}</p>
+    <div v-if="items.length > 0">
+        <p>Первый предмет:</p>
+        <pre>{{ items[1] }}</pre>
+    </div>
+</div>
         <div class="sticky top-0 z-30 bg-[#0f1115]/95 backdrop-blur-md py-4 border-b border-gray-800 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:bg-transparent sm:backdrop-blur-none sm:border-none sm:static">
             <div class="flex flex-col sm:flex-row gap-4 justify-between">
                 <div class="relative w-full sm:max-w-md group">
@@ -157,36 +190,68 @@ const refreshInventory = () => {
                 v-for="item in filteredItems" 
                 :key="item.id"
                 :href="route('inventories.item', item.id)"
-                class="group bg-[#15171c] border border-gray-800 hover:border-emerald-500/50 rounded-xl p-3 transition-all duration-300 relative hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-900/10 flex flex-col"
+                class="group bg-[#15171c] border rounded-xl p-3 transition-all duration-300 relative hover:-translate-y-1 hover:shadow-2xl flex flex-col overflow-hidden"
+                :class="[
+                    item.is_stattrak 
+                        ? 'border-orange-500/30 hover:border-orange-500/60 hover:shadow-orange-900/10' 
+                        : 'border-gray-800 hover:border-emerald-500/50 hover:shadow-emerald-900/10'
+                ]"
             >
                 <div 
-                    class="absolute bottom-0 left-3 right-3 h-[2px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+                    class="absolute bottom-0 left-0 right-0 h-[3px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
                     :style="{ background: getRarityColor(item.rarity_color) }"
                 ></div>
 
-                <div class="aspect-[1.3] flex items-center justify-center mb-3 relative overflow-hidden rounded-lg bg-gradient-to-b from-gray-800/30 to-transparent">
-                    <div v-if="item.name.includes('StatTrak')" class="absolute top-1 right-1 bg-orange-500/90 text-black text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm z-20">ST™</div>
+                <div class="aspect-[1.3] flex items-center justify-center mb-3 relative rounded-lg bg-gradient-to-b from-gray-800/30 to-transparent p-4">
+                    
+                    <div v-if="item.is_stattrak" class="absolute top-2 left-2 flex flex-col items-center">
+                        <div class="bg-[#1c1c1c] border border-orange-500/50 text-orange-500 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded leading-none shadow-lg">
+                            ST™
+                        </div>
+                    </div>
+
+                    <div v-if="item.is_souvenir" class="absolute top-2 left-2">
+                        <div class="bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                            SOUV
+                        </div>
+                    </div>
+
+                    <div v-if="item.wear_name" class="absolute top-2 right-2">
+                        <div 
+                            class="text-[9px] font-bold px-1.5 py-0.5 rounded border backdrop-blur-sm transition-colors"
+                            :class="getWearStyle(item.wear_name)"
+                            :title="item.wear_name"
+                        >
+                            {{ getWearShort(item.wear_name) }}
+                        </div>
+                    </div>
 
                     <div 
-                        class="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500" 
-                        :style="{ background: `radial-gradient(circle at center, ${getRarityColor(item.rarity_color)} 0%, transparent 70%)` }"
+                        class="absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-500 rounded-lg" 
+                        :style="{ background: `radial-gradient(circle at center, ${getRarityColor(item.rarity_color)} 0%, transparent 60%)` }"
                     ></div>
                     
                     <img 
                         :src="item.image" 
                         :alt="item.name" 
                         loading="lazy" 
-                        class="max-h-[85%] w-auto drop-shadow-lg z-10 group-hover:scale-110 transition-transform duration-300 ease-out select-none"
+                        class="w-full h-full object-contain drop-shadow-xl z-10 group-hover:scale-110 transition-transform duration-300 ease-out select-none"
                     >
                 </div>
 
-                <div class="mt-auto space-y-1">
-                    <div class="font-medium text-gray-200 text-xs truncate leading-tight group-hover:text-white transition-colors" :title="item.market_hash_name">
-                        {{ item.name.split('|')[0] }}
-                        <span class="text-gray-500 font-normal"> | {{ item.name.split('|')[1] || item.market_hash_name }}</span>
+                <div class="mt-auto space-y-1.5 z-10">
+                    <div class="font-medium text-gray-200 text-xs truncate leading-tight transition-colors">
+                        <span v-if="item.is_stattrak" class="text-orange-500 font-bold mr-1">StatTrak™</span>
+                        <span class="group-hover:text-white" :style="{ color: item.is_stattrak ? '#ffb98a' : getRarityColor(item.rarity_color) }">
+                            {{ item.name.split('|')[0] }}
+                        </span>
                     </div>
                     
-                    <div class="flex items-center justify-between pt-2 border-t border-gray-800/50">
+                    <div class="text-[10px] text-gray-500 truncate font-mono flex items-center gap-2">
+                        <span>{{ item.name.split('|')[1] || item.market_hash_name }}</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between pt-2 border-t border-gray-800/50 group-hover:border-gray-700/50 transition-colors">
                         <div>
                             <div class="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Цена</div>
                             <div class="text-sm font-mono font-bold text-white group-hover:text-emerald-400 transition-colors">
@@ -194,8 +259,8 @@ const refreshInventory = () => {
                             </div>
                         </div>
                         
-                        <div class="opacity-50 group-hover:opacity-100 transition-opacity">
-                            <div class="w-6 h-6 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 group-hover:bg-emerald-600 group-hover:text-white transition">
+                        <div class="opacity-0 -translate-x-2 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                            <div class="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 group-hover:bg-emerald-500 group-hover:text-white">
                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                             </div>
                         </div>

@@ -65,6 +65,23 @@ const user = page.props.auth.user;
                     </div>
                 </div>
 
+                <div>
+                    <p class="px-4 text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">Инструменты</p>
+                    <div class="space-y-1">
+                        <Link :href="route('simulator.index')" 
+                              class="group flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 relative overflow-hidden"
+                              :class="route().current('simulator.index') 
+                                ? 'text-white bg-orange-600/10 shadow-[0_0_20px_rgba(234,88,12,0.15)]' 
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'">
+                            <div v-if="route().current('simulator.index')" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-orange-500 rounded-r-full shadow-[0_0_10px_#ea580c]"></div>
+                            <svg class="w-5 h-5 transition-colors" :class="route().current('simulator.index') ? 'text-orange-400' : 'text-gray-500 group-hover:text-gray-300'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span>Симулятор</span>
+                        </Link>
+                    </div>
+                </div>
+
             </nav>
 
             <div class="p-4 mt-auto">

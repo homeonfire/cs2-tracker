@@ -7,6 +7,7 @@ use App\Http\Controllers\ProfileController; // <--- Важно: подключи
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Models\Item;
+use App\Http\Controllers\ContractSimulatorController;
 
 // Главная редиректит на список инвентарей
 Route::get('/', function () {
@@ -55,6 +56,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Просмотр детализации предмета
     Route::get('/inventory-items/{id}', [InventoryController::class, 'itemDetails'])->name('inventory.item');
+
+    Route::prefix('simulator')->name('simulator.')->group(function () {
+        Route::get('/', [ContractSimulatorController::class, 'index'])->name('index');
+        Route::get('/search', [ContractSimulatorController::class, 'search'])->name('search');
+        Route::post('/calculate', [ContractSimulatorController::class, 'calculate'])->name('calculate');
+    });
+    
+    Route::get('/simulator/profitable', [ContractSimulatorController::class, 'profitable'])->name('simulator.profitable');
 });
 
 // --- ВЕРНУЛИ СТАНДАРТНЫЕ МАРШРУТЫ ПРОФИЛЯ ---

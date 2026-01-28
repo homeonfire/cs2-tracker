@@ -7,71 +7,71 @@ use App\Models\InventoryItem;
 use App\Models\Item;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class InventoryService
 {
-    /**
-     * Синхронизирует данные из Steam с нашей локальной базой данных.
-     */
     public function syncInventory(User $user, string $steamId, array $steamItems)
     {
-        // 1. Находим или создаем "папку" инвентаря
         $inventory = Inventory::firstOrCreate(
             ['user_id' => $user->id, 'steam_id' => $steamId],
             ['name' => 'Main Inventory', 'total_value' => 0]
         );
 
-        // Получаем то, что уже есть в базе
-        $hashNames = array_column($steamItems, 'market_hash_name');
-        $globalItems = Item::whereIn('market_hash_name', $hashNames)->get()->keyBy('market_hash_name');
+        // Собираем все "чистые имена" для поиска в базе (AK-47 | Asiimov)
+        $cleanNames = array_unique(array_column($steamItems, 'clean_name'));
+        
+        // Загружаем существующие предметы из базы
+        $globalItems = Item::whereIn('market_hash_name', $cleanNames)->get()->keyBy('market_hash_name');
 
         $currentAssetIds = [];
         $totalValue = 0;
 
         DB::transaction(function () use ($inventory, $steamItems, &$globalItems, &$currentAssetIds, &$totalValue) {
             foreach ($steamItems as $itemData) {
-                $name = $itemData['market_hash_name'];
+                $cleanName = $itemData['clean_name'];
                 
-                // --- ИЗМЕНЕНИЕ: Создаем предмет, если его нет в базе цен ---
-                if (!isset($globalItems[$name])) {
+                // Если предмета нет в нашей эталонной базе (SkinsSeeder не загрузил), создаем его
+                if (!isset($globalItems[$cleanName])) {
+                    // ВАЖНО: Мы создаем "чистый" предмет без привязки к качеству
                     $newItem = Item::create([
-                        'market_hash_name' => $name,
-                        'name' => $itemData['name'],
+                        'market_hash_name' => $cleanName,
+                        'name' => $cleanName, // Имя тоже чистое
                         'image_url' => $itemData['image'],
                         'rarity_color' => $itemData['rarity_color'],
-                        'price_skinport' => 0, // Цены нет, так как это нетрейдабл
-                        'price_steam' => 0,
+                        // Цены пока 0, их потом обновит CSFloatService по чистому имени
+                        'price_csfloat' => 0, 
                     ]);
                     
-                    // Добавляем в локальный массив, чтобы дальше код работал как обычно
-                    $globalItems->put($name, $newItem);
+                    $globalItems->put($cleanName, $newItem);
                 }
-                // -----------------------------------------------------------
 
-                $globalItem = $globalItems[$name];
+                $globalItem = $globalItems[$cleanName];
                 $currentAssetIds[] = $itemData['asset_id'];
                 
-                // Обновляем картинку/цвет, если они пустые в базе
-                if (empty($globalItem->image_url) || empty($globalItem->rarity_color)) {
-                    $globalItem->update([
-                        'image_url' => $itemData['image'],
-                        'rarity_color' => $itemData['rarity_color']
-                    ]);
-                }
-
-                // Считаем сумму
-                $price = $globalItem->price_skinport ?? $globalItem->price_steam ?? 0;
+                // Берем цену из базы (она там обновляется отдельным сервисом)
+                // Делим на 100, если там центы, или берем как есть
+                // Для MVP возьмем price_csfloat (центы) -> доллары
+                $price = ($globalItem->price_csfloat ?? 0) / 100;
                 $totalValue += $price;
 
-                // Сохраняем в инвентарь
+                // Сохраняем ЭКЗЕМПЛЯР предмета в инвентарь юзера
                 InventoryItem::updateOrCreate(
                     [
                         'inventory_id' => $inventory->id,
                         'asset_id' => $itemData['asset_id']
                     ],
                     [
-                        'item_id' => $globalItem->id,
+                        'item_id' => $globalItem->id, // Ссылка на чистый скин
                         'is_tradable' => $itemData['is_tradable'],
+                        
+                        // Сохраняем уникальные свойства этого конкретного экземпляра
+                        'wear_name' => $itemData['wear_name'],     // "Field-Tested"
+                        'is_stattrak' => $itemData['is_stattrak'], // true/false
+                        'is_souvenir' => $itemData['is_souvenir'], // true/false
+                        
+                        // float_value пока null, его Steam Inventory API не отдает напрямую.
+                        // Его надо парсить отдельно через inspect link (следующая задача).
                     ]
                 );
             }
@@ -81,7 +81,6 @@ class InventoryService
                 ->whereNotIn('asset_id', $currentAssetIds)
                 ->delete();
 
-            // Обновляем общую стоимость
             $inventory->update(['total_value' => $totalValue]);
         });
         

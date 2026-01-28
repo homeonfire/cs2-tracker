@@ -7,9 +7,6 @@ use Illuminate\Support\Facades\Log;
 
 class SteamInventoryService
 {
-    // Базовый URL для получения инвентаря CS2 (AppID: 730, ContextID: 2)
-    // l=english важно для получения английских названий (Market Hash Name)
-    // count=5000 чтобы получить максимум предметов за раз
     private const BASE_URL = 'https://steamcommunity.com/inventory/%s/730/2?l=english&count=2000';
 
     public function fetchInventory(string $steamId)
@@ -17,12 +14,10 @@ class SteamInventoryService
         $url = sprintf(self::BASE_URL, $steamId);
 
         try {
-            // Делаем запрос к Steam
-            // Важно: Steam часто блокирует запросы без User-Agent
             $response = Http::withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => 'gzip, deflate, br', // Сжатие Brotli для экономии трафика
+                'Accept-Encoding' => 'gzip, deflate, br',
             ])->get($url);
 
             if ($response->failed()) {
@@ -32,9 +27,8 @@ class SteamInventoryService
 
             $data = $response->json();
 
-            // Проверяем, вернул ли Steam данные
             if (!isset($data['assets']) || !isset($data['descriptions'])) {
-                return null; // Инвентарь пуст или скрыт
+                return null;
             }
 
             return $this->formatItems($data);
@@ -45,15 +39,10 @@ class SteamInventoryService
         }
     }
 
-    // Steam отдает данные странно: отдельно список предметов (assets) и отдельно их описания (descriptions).
-    // Нам нужно их склеить ("смерджить").
     private function formatItems(array $data): array
     {
         $descriptions = [];
-        
-        // Создаем карту описаний для быстрого поиска
         foreach ($data['descriptions'] as $desc) {
-            // Ключ - это комбинация classid и instanceid
             $key = $desc['classid'] . '_' . ($desc['instanceid'] ?? '0');
             $descriptions[$key] = $desc;
         }
@@ -66,13 +55,23 @@ class SteamInventoryService
             if (isset($descriptions[$key])) {
                 $desc = $descriptions[$key];
                 
-                // Пропускаем непередаваемые предметы (медали, монеты), если нужно
-                // if ($desc['tradable'] == 0) continue;
+                // --- ГЛАВНОЕ ИЗМЕНЕНИЕ ---
+                // Парсим имя, чтобы отделить качество от названия
+                $parsed = $this->parseItemName($desc['market_hash_name']);
+                // -------------------------
 
                 $inventory[] = [
                     'asset_id' => $asset['assetid'],
-                    'market_hash_name' => $desc['market_hash_name'],
-                    'name' => $desc['name'], // Обычное имя
+                    
+                    // Сохраняем и оригинал (для поиска), и чистое имя (для базы)
+                    'market_hash_name' => $desc['market_hash_name'], // "AK-47 | Asiimov (Field-Tested)"
+                    'clean_name' => $parsed['clean_name'],           // "AK-47 | Asiimov"
+                    
+                    // Метаданные качества для таблицы inventory_items
+                    'wear_name' => $parsed['wear_name'],             // "Field-Tested"
+                    'is_stattrak' => $parsed['is_stattrak'],
+                    'is_souvenir' => $parsed['is_souvenir'],
+
                     'image' => 'https://community.cloudflare.steamstatic.com/economy/image/' . $desc['icon_url'],
                     'is_tradable' => $desc['tradable'],
                     'rarity_color' => $this->extractColor($desc['tags'] ?? [])
@@ -83,7 +82,6 @@ class SteamInventoryService
         return $inventory;
     }
 
-    // Вспомогательная функция для поиска цвета редкости в тегах
     private function extractColor(array $tags): ?string
     {
         foreach ($tags as $tag) {
@@ -91,6 +89,54 @@ class SteamInventoryService
                 return $tag['color'] ?? null;
             }
         }
-        return null; // Серый по умолчанию
+        return null;
+    }
+
+    /**
+     * Превращает "StatTrak™ AK-47 | Asiimov (Field-Tested)" -> "AK-47 | Asiimov"
+     */
+    private function parseItemName($marketHashName)
+    {
+        $cleanName = $marketHashName;
+        $wear = null;
+        $isStattrak = false;
+        $isSouvenir = false;
+
+        $wears = [
+            ' (Factory New)', 
+            ' (Minimal Wear)', 
+            ' (Field-Tested)', 
+            ' (Well-Worn)', 
+            ' (Battle-Scarred)',
+            ' (Not Painted)'
+        ];
+
+        foreach ($wears as $w) {
+            if (str_ends_with($cleanName, $w)) {
+                $wear = trim($w, ' ()');
+                $cleanName = substr($cleanName, 0, -strlen($w));
+                break;
+            }
+        }
+
+        if (str_contains($cleanName, 'StatTrak™ ')) {
+            $isStattrak = true;
+            $cleanName = str_replace('StatTrak™ ', '', $cleanName);
+        }
+
+        if (str_contains($cleanName, 'Souvenir ')) {
+            $isSouvenir = true;
+            $cleanName = str_replace('Souvenir ', '', $cleanName);
+        }
+
+        // Удаляем Star для ножей (★ StatTrak™ Karambit...)
+        $cleanName = str_replace('★ ', '', $cleanName);
+
+        return [
+            'clean_name' => $cleanName,
+            'wear_name' => $wear,
+            'is_stattrak' => $isStattrak,
+            'is_souvenir' => $isSouvenir
+        ];
     }
 }

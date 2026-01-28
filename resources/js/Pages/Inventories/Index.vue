@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import Modal from '@/Components/Modal.vue'; 
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -11,10 +11,11 @@ const props = defineProps({
     inventories: Array,
 });
 
+// Форматирование цены
 const formatPrice = (value) => {
     let val = parseFloat(value);
-    if (isNaN(val)) val = 0;
-    return '$' + val.toFixed(2);
+    if (isNaN(val) || !val) val = 0; // Защита от null
+    return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const showCreateModal = ref(false);
@@ -62,6 +63,7 @@ const submit = () => {
             >
                 <div class="flex items-start gap-4">
                     <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/5 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition">📦</div>
+                    
                     <div>
                         <div class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Стоимость</div>
                         <div class="text-3xl font-mono font-bold text-white group-hover:text-indigo-400 transition tracking-tight">
@@ -99,16 +101,17 @@ const submit = () => {
                 <div class="space-y-4">
                     <div>
                         <InputLabel value="Название" class="text-gray-400"/>
-                        <TextInput v-model="form.name" class="w-full bg-[#131519] border-gray-700 text-white mt-1" />
+                        <TextInput v-model="form.name" class="w-full bg-[#131519] border-gray-700 text-white mt-1 focus:border-indigo-500 focus:ring-indigo-500" />
                     </div>
                     <div>
                         <InputLabel value="Steam ID 64" class="text-gray-400"/>
-                        <TextInput v-model="form.steam_id" class="w-full bg-[#131519] border-gray-700 text-white mt-1" placeholder="765611..." />
+                        <TextInput v-model="form.steam_id" class="w-full bg-[#131519] border-gray-700 text-white mt-1 focus:border-indigo-500 focus:ring-indigo-500" placeholder="765611..." />
+                        <p class="text-[10px] text-gray-500 mt-1">ID профиля Steam (должен быть открытым)</p>
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-3">
-                    <button @click="showCreateModal = false" class="px-4 py-2 bg-gray-700 rounded-lg text-sm">Отмена</button>
-                    <PrimaryButton @click="submit" :disabled="form.processing">Сохранить</PrimaryButton>
+                    <button @click="showCreateModal = false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition">Отмена</button>
+                    <PrimaryButton @click="submit" :disabled="form.processing" class="bg-indigo-600 hover:bg-indigo-500">Сохранить</PrimaryButton>
                 </div>
             </div>
         </Modal>
