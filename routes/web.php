@@ -32,6 +32,8 @@ Route::get('/', function () {
     ]);
 })->name('welcome');
 
+Route::get('/trade-up-contract', [ContractSimulatorController::class, 'landing'])->name('simulator.landing');
+
 // Группа маршрутов для нашего приложения
 Route::middleware(['auth', 'verified'])->group(function () {
     
@@ -62,7 +64,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/search', [ContractSimulatorController::class, 'search'])->name('search');
         Route::post('/calculate', [ContractSimulatorController::class, 'calculate'])->name('calculate');
     });
-    
+
     Route::get('/simulator/profitable', [ContractSimulatorController::class, 'profitable'])->name('simulator.profitable');
 });
 

@@ -105,4 +105,18 @@ class ContractSimulatorController extends Controller
             'contracts' => $contracts
         ]);
     }
+    
+    public function landing()
+    {
+        // Берем топ-50 самых выгодных контрактов для витрины
+        $contracts = \App\Models\ProfitableContract::with(['item.collection'])
+            ->where('roi', '>', 0) // Только плюсовые
+            ->orderBy('roi', 'desc')
+            ->limit(100)
+            ->get();
+
+        return Inertia::render('Simulator/Landing', [
+            'contracts' => $contracts
+        ]);
+    }
 }
