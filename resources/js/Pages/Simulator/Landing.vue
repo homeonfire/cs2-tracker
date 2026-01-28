@@ -51,7 +51,7 @@ const filteredContracts = computed(() => {
 
                 <div class="flex items-center gap-4">
                     <template v-if="user">
-                        <Link :href="route('dashboard')" class="text-sm font-bold text-gray-300 hover:text-white transition">Dashboard</Link>
+                        <Link :href="route('simulator.index')" class="text-sm font-bold text-gray-300 hover:text-white transition">Simulator</Link>
                         <Link :href="route('simulator.index')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-500/20">
                             Открыть Симулятор
                         </Link>
